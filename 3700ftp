@@ -89,7 +89,7 @@ def receiveFTP(so):
 
 def receiveServer(data_channel):
     end = False
-    mes = ''
+    mes = b''
     while not end:
         mes = data_channel.recv(1024)
         if not data_channel.recv(1024):
@@ -236,12 +236,20 @@ def copyFileFromServer(client, server_path, local_path, move):
     # Send the command
     sendFTP(client, copy_cmnd)
     # Create the file and write the received data
-    with open(local_path, 'wb') as file:
-        file.write(receiveServer(data_channel))
-        file.close()
+    receiveDataServer(data_channel, local_path)
     if move:
         delFile(client, server_path)
     print(receiveFTP(client))
+
+
+def receiveDataServer(data_channel, local_path):
+    f = open(local_path, 'wb')
+    while True:
+        b = (data_channel.recv(1))
+        if b == b'':
+            break
+        f.write(b)
+    f.close()
 
 
 def delFile(client, path):
