@@ -219,7 +219,7 @@ def copyFileFromLocal(client, server_path, local_path, move):
     copy_cmnd = 'STOR ' + str(server_path) + '\r\n'
     # Send the data
     data_channel = open_data_channel(client)
-    sendDataChannel(data_channel, local_path)
+    sendDataChannel(data_channel, str(local_path))
     # Send the command
     sendFTP(client, copy_cmnd)
     close_data_channel(data_channel)
