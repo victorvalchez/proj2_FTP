@@ -6,12 +6,8 @@ import sys
 import re
 
 
-# HOST = "ftp.3700.network"
-# PORT = 21
-# ADDR = (HOST, PORT)
-
-
 def read_args():
+    """This function gets the arguments and returns them in a list"""
     if len(sys.argv) == 3:
         operation = sys.argv[1]
         param1 = sys.argv[2]
@@ -26,27 +22,29 @@ def read_args():
 
 
 def get_params(string):
+    """Splits the introduced parameter to get the different values
+    *Used for convenience"""
     par1 = string.split(':')[0]
     par2 = string.split(':')[1]
     return par1, par2
 
 
-def parse_url(url):  # Gotta change to parse the rest
-    # mkdir ftp://bob:s3cr3t@ftp.example.com/documents/homeworks-v2
+def parse_url(url):
+    """Selects the different elements from the introduced URL"""
     parts = urllib.parse.urlparse(url)
     netloc = parts.netloc
-    splited = netloc.split('@')
+    splitted = netloc.split('@')
     # To get the user and the password
-    if ':' in splited[0]:
-        user, password = get_params(splited[0])
+    if ':' in splitted[0]:
+        user, password = get_params(splitted[0])
     else:
         user = None
         password = ''
     # To get the server and the port
-    if ':' in splited[1]:
-        host, port = get_params(splited[1])
+    if ':' in splitted[1]:
+        host, port = get_params(splitted[1])
     else:
-        host = splited[1]
+        host = splitted[1]
         port = 21
     path = parts.path
     url_params = [user, password, path, host, port]
@@ -66,7 +64,7 @@ def sendFTP(so, msg):
 
 
 def sendDataChannel(data_channel, path):
-    """Function that sends the message through the socket"""
+    """Function that sends the message through the data channel as bytes"""
     with open(path, 'rb') as file:
         contents = file.read()
         file.close()
@@ -75,32 +73,29 @@ def sendDataChannel(data_channel, path):
 
 
 def receiveFTP(so):
-    """Function that receives the message from the server through the socket.
-    *Disclaimer: both functions were inspired by the ones showed by the professor in class"""
+    """Function that receives the message from the server through the socket"""
     end = False
     mes = ''
     while not end:
         mes += so.recv(1024).decode()
         if mes.endswith('\r\n'):
             end = True
-    # print(mes)
     return mes
 
 
 def receiveServer(data_channel):
+    """Receive data from data channel in the form of bytes"""
     end = False
     mes = b''
     while not end:
         mes = data_channel.recv(1024)
         if not data_channel.recv(1024):
             end = True
-    # print(mes)
     return mes
 
 
 def login(client):
-    # Ask to input the login credentials
-    # user = input("[CLIENT] Please enter your Username: ")
+    """Logs in to the FTP with the retrieved credentials from the URL"""
     args = read_args()
     operation = args[0]
     param1 = args[1]
@@ -108,10 +103,6 @@ def login(client):
 
     if url_params[0] is None:
         raise Exception('Server does ont support anonymous login!')
-        # user_cmnd = "USER " + url_params[0] + "\r\n"
-        # sendFTP(client, user_cmnd)
-        # Print message from FTP
-        # print(receiveFTP(client))
     else:
         user_cmnd = "USER " + str(url_params[0]) + "\r\n"
         sendFTP(client, user_cmnd)
@@ -125,7 +116,7 @@ def login(client):
 
 
 def get_correct_url(args, operation, param1):
-    sender = ''
+    """Gets the correct parameter for the URL in order to get the different parameters"""
     if operation == 'cp' or operation == 'mv':
         if re.match('^ftp://', param1):
             url_params = parse_url(param1)
@@ -146,6 +137,7 @@ def get_correct_url(args, operation, param1):
 
 
 def set_modes(client):
+    """Sets the specific modes when receiving and sending data"""
     type_cmnd = "TYPE I\r\n"
     sendFTP(client, type_cmnd)
     print(receiveFTP(client))
@@ -160,10 +152,13 @@ def set_modes(client):
 
 
 def open_data_channel(client):
+    """Opens data channel entering Passive Mode and selecting the right host and port"""
+    # Enter Passive Mode
     pasv_cmnd = "PASV\r\n"
     sendFTP(client, pasv_cmnd)
     response = receiveFTP(client)
     print(response)
+    # Convert the given numbers into the host and the port
     host_port = response.split('(')[1][:-4].split(',')
     port_list = []
     host = ''
@@ -175,7 +170,7 @@ def open_data_channel(client):
             port_list.append(host_port[i])
     host = host[:-1]
     port = (int(port_list[0]) << 8) + int(port_list[1])
-
+    # Create a new socket and connect
     data_channel = socket.socket(socket.AF_INET, socket.SOCK_STREAM)  # To use TCP connection
     data_channel.connect((str(host), port))
 
@@ -183,22 +178,26 @@ def open_data_channel(client):
 
 
 def close_data_channel(data_channel):
+    """Close data channel"""
     data_channel.close()
 
 
 def makeDirectory(client, path: str):
+    """Create a new directory in the given path"""
     mkd_cmnd = 'MKD ' + str(path) + '\r\n'
     sendFTP(client, mkd_cmnd)
     print(receiveFTP(client))
 
 
 def delDirectory(client, path: str):
+    """Remove the directory from the path"""
     rmd_cmdn = 'RMD ' + str(path) + '\r\n'
     sendFTP(client, rmd_cmdn)
     print(receiveFTP(client))
 
 
 def listDirectories(client, path):
+    """Get all the files and directories from that path"""
     # Set the correct modes
     set_modes(client)
     if path is None:
@@ -210,6 +209,7 @@ def listDirectories(client, path):
 
 
 def copyFileFromLocal(client, server_path, local_path, move):
+    """Send data to the FTP server"""
     # Set the correct modes
     set_modes(client)
     # Create command for FTP sever
@@ -227,6 +227,7 @@ def copyFileFromLocal(client, server_path, local_path, move):
 
 
 def copyFileFromServer(client, server_path, local_path, move):
+    """Download data from the server"""
     # Set the correct modes
     set_modes(client)
     # Open the data channel
@@ -243,6 +244,7 @@ def copyFileFromServer(client, server_path, local_path, move):
 
 
 def receiveDataServer(data_channel, local_path):
+    """To write the data to the file (if it's new create it)"""
     f = open(local_path, 'wb')
     while True:
         b = (data_channel.recv(1))
@@ -253,15 +255,17 @@ def receiveDataServer(data_channel, local_path):
 
 
 def delFile(client, path):
+    """Remove given file name from that path"""
     del_cmdn = 'DELE ' + str(path) + '\r\n'
     sendFTP(client, del_cmdn)
     print(receiveFTP(client))
 
 
-# FOR MOVE DELETE FROM THE OTHER PLACE
 def main():
+    """Connect and do the operation"""
     # Connect the control socket
     client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)  # To use TCP connection
+    # Read the arguments, get the correct parameters and connect to the server
     args = read_args()
     operation = args[0]
     param1 = args[1]
@@ -271,8 +275,9 @@ def main():
     # Receive welcome message
     print(receiveFTP(client))
 
-    # Connect to server
+    # Login to FTP server
     login(client)
+    # Check different operations and do the correct one
     if operation == 'ls':
         path = url_params[2]
         listDirectories(client, path)
@@ -301,6 +306,7 @@ def main():
     quit_cmnd = 'QUIT\r\n'
     sendFTP(client, quit_cmnd)
     print(receiveFTP(client))
+    client.close()
 
 
 if __name__ == '__main__':

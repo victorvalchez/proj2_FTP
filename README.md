@@ -1,16 +1,24 @@
-## Project 1: FTP Server
+## Project 2: FTP Server 
+ 
+### Description 
+In this project, we will develop a client for the File Transfer Protocol (FTP) protocol. A FTP server has been set up to use when developing and debugging your client. The server is available at ftp://ftp.3700.network. 
+ 
+### Approach 
 
-### Description
-Implement a client program that plays a variant of the recently-popular game Wordle. The program will make guesses for the secret word, and the server will give you information about how close your guess is. Once the client correctly guesses the word, the server will return a secret flag.
+This project required quite a few more functions than the last one. The main ones are the different send and receive functions I created depending on whether it was a data transfer or just a message, the login function, and the different command functions. I will explain them briefly. 
 
-### Approach
-For the server connection, I created two basic functions. The _send_ function just sends the message through the socket and stores the sent bytes. On the contrary, the _receive_ function gets the message from the server and stores it in a variable. Both functions are used to communicate with the server and be able to implement the game algorithm.
-Next, for the Wordle part I store the ID from the server that will be used for the current game. In my approach I decided to always use the same word for the first try, in this case ‘least’ as according to Google it was a desirable choice.
-The game algorithm works with two main functions that are repeated until the correct word is found. The function _compare_words_ gets the given word and compares it to all the words from the word list being used for that try. Iterates through all the letters just checking if they are the same, if they are, it adds a 2 to the new marks (later used to compare to the given ones by the server), however, if they are not the same they get added to a list of letters not in the word to later filter all the words, finally, if the word has one of those letters, the mark gets changed to a 1 and removed from the missing letters list. Then the function _filter_words_ checks all the words in the current list and compares them to the marks received from the server. If they follow the pattern, that word gets added to the next word list.
-Finally, the algorithm will iterate until it gets the final word, printing the obtained flag. 
+I am going to explain the functions in the order in which they happen in the _main_ one. First, the server connects to the given host and port specified by the user in the URL, by parsing this URL using the rse_url_ function. Then the _login_ function, in which all the arguments are read by the _read_args_ function which simply returns them, and the received URL is parsed to get the different elements of it. After that, the FTP server gets sent by the client to the user, and the password so the login can be made. 
 
-### Challenges and difficulties
-The most challenging thing for this project was learning how to work with the Khoury Machine. Coming as an exchange student and taking a high-level class like this is difficult since everyone in the class is supposed to know all these basic things from previous years. After finding out how to work with that, learning about sockets was not as difficult as I thought. At first, I was a bit lost but with some YouTube tutorials and a lot of research I figured. For the algorithm to solve the problem I exchanged ideas with a few of my classmates and together we managed to get a result. 
+An if statement will take place to select the correct operation specified in the command line. For the ones that do not require data transfer, the command specified in the statement gets passed with the path specified in the URL. However, if data transfer is needed, another socket will be opened with the host and port provided by the _’Passive Mode’_. Before that, all required modes are set with the _set_modes_ function. The command is sent to the control socket and the data is received at the data channel socket. The _makeDirectory_ and _removeDirectory_ functions are simple they just create and delete a directory in the given path; same with the _delFile_ which simply removes the file. 
 
-### Testing and debugging
-I tested the code using trial and error until I got the flag each time I ran it. I have not focused on the performance much since I am not used to working with the terminal and sometimes it was hard to handle all the stuff there. Nevertheless, I got the result in about 3-8 tries every time being surprisingly consistent. 
+The most complex functions are _copyFileFromLocal_ and _copyFileFromServer_. The first one sends to the control channel the instruction to store the file in the specified path inside the server, gets the data channel opened and sends through it the local file – in case this operation was a move operation, it will simply remove the file from the local directory – and then it will close the data channel, so it knows the transfer is completed. The second one does the same, but it gets the data from the server and tells the control socket where llocally it wants to store it. In case I want to receive data from the server I read each byte to know when it has finished (when I receive an empty byte). 
+
+Then the server is closed using _‘QUIT’_, and so is the control socket. 
+ 
+### Challenges and difficulties 
+After the first project the socket connection was not a big deal, however, working with bytes was. At first, I was confused with the way we had to use the data channel to send and receive data, also receiving the data in the form of bytes was a headache but after that everything worked out fine. 
+
+### Testing and debugging 
+I tested the code locally most of the time, when I thought I was done I went to Gradescope and checked the different error messages I was getting. After a few tries and a lot of debugging, I got all the answers correct. I did not try any FTP clients different than mine since I did not feel the need to, nonetheless, I feel like it would have been a particularly clever way to test it and see the functionality of an FTP server. 
+
+ 
